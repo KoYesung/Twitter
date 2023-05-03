@@ -34,6 +34,8 @@ export async function getById(id){
     return tweets.find((tweet) => tweet.id === id)
 }
 
+// Post 
+// tweets에 새로운 객체로 생성
 export async function create(text, name, username){
     const tweet = {
         id: Date.now().toString(),
@@ -46,6 +48,8 @@ export async function create(text, name, username){
     return tweets
 }
 
+// put
+// id와 text를 보냄
 export async function update(id, text){
     const tweet = tweets.find((tweet) => tweet.id === id)
     if(tweet){
@@ -54,6 +58,8 @@ export async function update(id, text){
     return tweet
 }
 
+//delete
+//id로 지우고싶은 tweet 지움
 export async function remove(id){
     tweets = tweets.filter((tweet) => tweet.id !== id)
 }
