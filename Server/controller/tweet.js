@@ -1,5 +1,4 @@
 // 모델과 뷰를 연결하는 역할
-
 import * as tweetRepository from '../data/tweet.js'
 
 // username으로 데이터 찾기

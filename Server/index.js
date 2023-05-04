@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
 import tweetsRouter from './router/tweets.js'
+import authRouter from './router/auth.js'
 
 const app = express()
 
@@ -12,6 +13,7 @@ app.use(morgan('tiny'))  // 사용자들이 접속하면 log를 콘솔에 찍음
 
 // router
 app.use('/tweets', tweetsRouter)
+app.use('/auth', authRouter)
 
 app.use((req, res, next) => {
     res.sendStatus(404)
