@@ -20,5 +20,5 @@ export async function createUser(user){
 }
 
 export async function findById(id){
-    return users.find((user) => user.id === id)  // 전달받은 아이디와 users에서 id를 찾음
+    return users.find((user) => user.id === id)  // 전달받은 아이디와 users에서 id가 같은 user 객체를 반환
 }
