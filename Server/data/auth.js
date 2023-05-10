@@ -1,24 +1,20 @@
-// password : abcd1234 -> $2b$10$Na0qDeTiUrfeDHZqnSF7yuzVoNvUI5rml57D/ZL11uk9wankrOWNO
-let users = [{
-    id: '1',
-    username: 'melon', 
-    password:'$2b$10$Na0qDeTiUrfeDHZqnSF7yuzVoNvUI5rml57D/ZL11uk9wankrOWNO',  //abcd1234
-    name:'이메론',
-    email:'melon@melon.com',
-    url:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS87Gr4eFO7Pt2pE8oym4dxXnxGZYL2Pl_N5A&usqp=CAU'
-    }
-];
+import { db } from "../db/database.js"
 
 export async function findByUsername(username){
-    return users.find((user) => user.username === username)
+    return db.execute('select * from users where username=?', [username]).then((result) => result[0][0])  // result[0][0]: 2차원 배열, 가입이 되면 { id: 4 } 가입된 아이디 값이 들어옴 
 }
 
 export async function createUser(user){
-    const created = {...user, id:Date.now().toString()}  // 전달받은 객체를 복사하고 id는 현재시간으로 바꿔줌
-    users.push(created)
-    return created.id
+    //user객체의 정보를 따로따로 저장
+    const { username, password, name, email, url } = user;
+
+    // execute(sql문, 전달할 데이터값): sql구문을 실행하는 메서드
+    // 여러개의 데이터를 전달할 때 대활호(배열) 사용
+    // db는 promise객체
+    return db.execute('insert into users (username, password, name, email, url) values (?, ?, ?, ?, ?)', [username, password, name, email, url]).then((result) => result[0].insertId)  // insertId(생성된 id)만 찍어주기 위해
+
 }
 
 export async function findById(id){
-    return users.find((user) => user.id === id)  // 전달받은 아이디와 users에서 id가 같은 user 객체를 반환
+    return db.execute('select id from users where id=?', [id]).then((result) => result[0][0])
 }
