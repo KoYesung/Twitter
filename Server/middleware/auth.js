@@ -16,7 +16,6 @@ export const isAuth = async (req, res, next) => {
     jwt.verify(
         token,
         //토큰 해석하는 secretkey(contoller/auth.js)
-        // 'HT!sfh99Ec0Ggr5jGpjD%7xtZgdi4#TU',
         config.jwt.secretKey,
         async (error, decoded) => {
             if(error){

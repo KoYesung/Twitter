@@ -20,6 +20,6 @@ export const config = {
         saltRounds:parseInt(required('BCRYPT_SALT_ROUND', 12))  // 기본값은 12로 설정
     },
     host: {
-        port:parseInt(required('SERVER_PORT', 9090))  // 기본값은 8080
+        port:parseInt(required('SERVER_PORT', 8080))  // 기본값은 8080
     }
 }

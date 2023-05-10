@@ -1,5 +1,7 @@
 // 모델과 뷰를 연결하는 역할
 import * as tweetRepository from '../data/tweet.js'
+// import { Server } from 'socket.io'
+import { getSocketIO } from '../connection/socket.js';
 
 // username으로 데이터 찾기
 export async function getTweets(req, res) {
@@ -22,10 +24,12 @@ export async function getTweetsById(req, res){
 }
 
 // Post
+// 사용자에게 특정 이벤트를 발생시키기
 export async function createTweet(req, res){
     const { text } = req.body;
     const tweet = await tweetRepository.create(text, req.userId)
     res.status(201).json(tweet)
+    getSocketIO().emit('tweets', tweet)
 }
 
 
