@@ -59,3 +59,19 @@ npm i socket.io
 socket.io
 - 클라이언트와 서버와의 소켓은 따로 있음
 - 서버 소켓은 두개의 소켓이 있는데 클라이언트의 요청을 대기하고 있는 소켓과 사용자가 들어오게되면 그 사용자와 1:1로 연결하는 소켓을 가짐
+
+
+
+5/11
+ORM(Object-Relational Mapping)
+- 객체와 관계형 데이터베이스 간의 데이터를 매핑하는 기술
+- 객체 지향 프로그래밍 언어에서 사용하는 객체와 속성들을 데이터베이스 테이블과 열(column)에 매핑
+- 개발자는 SQL 쿼리를 직접 작성하지 않고, 객체를 통해 데이터베이스에 접근할 수 있음
+- 실제 SQL을 사용하는 것 보다 데이터베이스를 다루는데 느림
+- 복잡한 서브쿼리같은 것은 ORM으로 표현하기 힘듬
+
+
+Sequelize
+-https://sequelize.org/docs/v6/
+- Node.js 기반의 ORM(Object Relational Mapping) 라이브러리
+

@@ -1,69 +1,103 @@
 // 데이터와 데이터를 처리하는 로직
 // 트윗된 데이터를 가져옴
+import SQ, { Sequelize } from 'sequelize'
+import { sequelize } from '../db/database.js';
+import { User } from './auth.js';
 
-import * as userRepository from './auth.js'
-import { db } from '../db/database.js';
+const DataTypes = SQ.DataTypes; // 데이터 형식을 지정해줄 수 있음
 
-const SELECT_JOIN = 'select tw.id, tw.text, tw.createdAt, tw.userId, us.username, us.name, us.email, us.url from tweets as tw left outer join users as us on tw.userId = us.id'
+const INCLUDE_USER = {
+    // select 뒤에 보고싶은 필드만 적듯이 attributes에 보고싶은 애들만 적어줌
+    attributes: [
+        'id',
+        'text',
+        'createdAt',
+        'userId',
+        // users 테이블에 있는 요소들 -> 한단계 안에 있는 요소들을 한단계 밖으로 꺼냄
+        [Sequelize.col('user.name'), 'name'],   // name으로 지정
+        [Sequelize.col('user.username'), 'username'],  // username으로 지정
+        [Sequelize.col('user.url'),'url']     // url으로 지정
+    ],
+    include : {
+        model: User,
+        attributes: [],    // 위에서 작성한 attributes를 포함하여 보낸다
+    }
+}
 
-const ORDER_DESC = 'order by tw.createdAt desc'
+
+const ORDER_DESC = {
+    order: [['createdAt', 'DESC']]
+}
+
+export const Tweet = sequelize.define(
+    'tweet',
+    {
+        id: {
+            type: DataTypes.INTEGER,
+            autoIncrement:true,
+            allowNull:false,
+            primaryKey: true
+        },
+        text: {
+            type: DataTypes.TEXT,
+            allowNull: false
+        } 
+    }
+    // { timestamps: false }   false로 하면 createdAt, updatedAt이 안생김
+)
+// User 테이블과 join
+Tweet.belongsTo(User)
 
 // 전체 데이터 반환
 export async function getAll(){
-    // return Promise.all(
-    //     tweets.map(async (tweet) => {
-    //         const { username, name, url } = await userRepository.findById(tweet.userId)
-    //         return {...tweet, username, name, url}
-    //     } )
-    // )
-    return db.execute(`${SELECT_JOIN} ${ORDER_DESC}`)
-    .then((result) => result[0])
+    // ...INCLUDE_USER 계속 사용할 객체 -> 복사해서 넣음
+    return Tweet.findAll({...INCLUDE_USER, ...ORDER_DESC})
 }
 
 // username(회원의 아이디)으로 데이터 반환
 export async function getAllByUsername(username){
-    // return getAll().then((tweets) => tweets.filter((tweet) => tweet.username === username))
-    return db.execute(`${SELECT_JOIN} where us.username=? ${ORDER_DESC}`, [username])
-    .then((result) => result[0])
+    return Tweet.findAll({
+        ...INCLUDE_USER, 
+        ...ORDER_DESC,
+        include: {
+            ...INCLUDE_USER.include,
+                where: {username}   // username:username인 것을 확인해서 조회
+        }})
 }
 
 
 // id(트윗의 번호)로 데이터 반환
 //find(): 배열에서 원하는 값을 찾는 데 사용
 export async function getById(id){
-    // const found = tweets.find((tweet) => tweet.id === id);
-    // if(!found) {
-    //     return null;
-    // }
-    // const {username, name, url} = await userRepository.findById(found.userId);
-    // return {...found, username, name, url}
-    return db.execute(`${SELECT_JOIN} where tw.id=?`, [id])
-    .then((result) => result[0][0])  // 해당하는 트윗의 id만 뽑음
+    return Tweet.findOne({
+        where:{id},   // where절이 무조건 먼저 나와야함, 조인했을때 어떤 테이블에서 찾는지는 다음에 작성)
+        ...INCLUDE_USER 
+    })
 }
 
 // Post 
 // tweets에 새로운 객체로 생성
 export async function create(text, userId){
-    return db.execute('insert into tweets (text, createdAt, userId) values (?,?,?)',[text,new Date(), userId])
-    .then((result) => console.log(result));
+    return Tweet.create({text, userId}).then((data) => {
+        console.log(data)
+        return data
+    })
 }
 
 
 // put (tweet의 내용 수정)
 // id와 text를 보냄
 export async function update(id, text){
-    // const tweet = tweets.find((tweet) => tweet.id === id)
-    // if(tweet){
-    //     tweet.text = text;
-    // }
-    // return tweet
-    return db.execute('update tweets set text=? where id=?', [text, id])
-    .then(() => getById(id))
+    return Tweet.findByPk(id, INCLUDE_USER).then((tweet) => {
+        tweet.text = text;
+        return tweet.save()  // 새로운  tweet 객체를 저장함
+    })
 }
 
 //delete
 //id로 지우고싶은 tweet 지움
 export async function remove(id){
-    // tweets = tweets.filter((tweet) => tweet.id !== id)
-    return db.execute('delete from tweets where id=?', [id])
+    return Tweet.findByPk(id).then((tweet) => {
+        tweet.destroy()   // 아이디로 찾은 해당 tweet을 삭제함
+    })
 }   

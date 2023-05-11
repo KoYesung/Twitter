@@ -7,6 +7,7 @@ import { config } from './config.js'
 // import { Server } from 'socket.io'
 import { initSocket } from './connection/socket.js'
 // import { db } from './db/database.js'
+import { sequelize } from './db/database.js'
 
 const app = express()
 
@@ -23,7 +24,15 @@ app.use((req, res, next) => {
     res.sendStatus(404)
 })
 
+// DB 연결 확인하기
 // db.getConnection().then((connection) => console.log(connection))
+
+sequelize.sync().then(() => {
+    // console.log(client)
+    const server = app.listen(config.host.port)  
+    initSocket(server); 
+    
+})
 
 // 서버에러
 app.use((error, req, res, next) => {
@@ -33,8 +42,7 @@ app.use((error, req, res, next) => {
 
 
 // express를 사용하여 서버를 기다리는 객체 생성(웹으로도 사용가능)
-const server = app.listen(config.host.port)  
-initSocket(server);
+
 
 
 // // host: {port:parseInt(required('SERVER_PORT'), 8080)}
