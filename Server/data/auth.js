@@ -1,61 +1,45 @@
-import SQ from 'sequelize'
-import { sequelize } from '../db/database.js';
-const DataTypes = SQ.DataTypes; // 데이터 형식을 지정해줄 수 있음
-import moment from 'moment-timezone';
+import { getUsers } from '../db/database.js';
+import  * as MongoDb  from 'mongodb'
+const ObjectID = MongoDb.ObjectId;  //ObjectId: 데이터를 넣으면 자동으로 특정한 key값이 생김 
 
+// {
+//     acknowledged: true,
+//     insertedId: new ObjectId("645d982ba2c2ffa15dd17493")  // ObjectId
+//   }
 
-// users 테이블을 만들어주는 객체
-export const User = sequelize.define(
-    // 테이블 이름 설정 - user라고 만들면 users라고 생김(s가 붙여짐!)
-    'user',  // users라는 테이블이 있으면 만들어지지 않고 기존에 있던 users 테이블을 가리키게 됨
-    {   
-        //첫번째 컬럼
-        id: {
-            type: DataTypes.INTEGER,  // 데이터형식이 int
-            autoIncrement: true,      
-            allowNull: false,
-            primaryKey: true
-        },
-        username: {
-            type:DataTypes.STRING(45),   // 데이터타입이 str(45글자)
-            allowNull:false
-        },
-        password: {
-            type: DataTypes.STRING(128),
-            allowNull: false
-        },
-        name: {
-            type:DataTypes.STRING(45),
-            allowNull:false
-        },
-        email: {
-            type: DataTypes.STRING(128),
-            allowNull:false
-        },
-        url: {type:DataTypes.TEXT},
-        // regdate: 날짜타입, 현재 시간을 자동으로 등록
-        regdate: {
-            type:DataTypes.DATE,
-            defaultValue: moment.tz(Date.now(), "Asia/Seoul")
-        }
-    },
-    // option - defalt 값에 줄 값을 지정
-    { timestamps: false }
-)
+/*
+    MongoDb의 특징 
+    { ... }
+    { userid: 'apple', name: '김사과'} 
+    { userid: 'apple', name: '김사과'}
+    일 때, 하나만 지울 수 없음(특정한 key값이 없음)
+*/
+
 
 export async function findByUsername(username){
-    // findOne(): User 테이블에서 데이터를 한개만 찾을 때
-    // where: where절
-    // username 필드 에서 주어진 username 인 것 (username:username)
-    return User.findOne({where: {username}})
+    return getUsers().find({username})  // 전달받은 username을 찾아 콜렉션에서 데이터를 하나만 찾아줌
+    .next()    // 위에 코드가 처리되면 아래로 연결하기 위해 작성(그냥 then()만 쓰면 무조건 실행됨)
+    .then(mapOptionalUser)  
 }
 
+//회원가입
 export async function createUser(user){
-    // user객체 데이터를 받아 id에 따라 dataValues를 통해 데이터를 입력하게 함
-    return User.create(user).then((data) => data.dataValues.id)
+    // collection을 먼저 선택함(getUsers()) -> 메서드 사용
+    return getUsers().insertOne(user)  // 전달된 user객체를 객체전체로 데이터를 저장
+    .then((result) => {
+        console.log(result);
+        // result.ops[0]._id.toString()
+    })
 }
 
 export async function findById(id){
-    //User테이블에서 PK값(id임)을 찾음
-    return User.findByPk(id);
+    return getUsers().find({ _id: new ObjectID(id) })  // 전달받은 id를 ObjectID 객체로 만든 _id를 찾아 반환
+    .next()
+    .then(mapOptionalUser)
+}
+
+function mapOptionalUser(user){
+    return user 
+    ? { ...user, id: user._id.toString() }  // user객체가 있다면 user객체를 복사한 새로운 객체로 만들고 _id 필드를 str로 변환하고 추가하여 반환
+    : user;  // 없다면 undefined인 user이 반환
 }

@@ -1,103 +1,81 @@
 // 데이터와 데이터를 처리하는 로직
 // 트윗된 데이터를 가져옴
-import SQ, { Sequelize } from 'sequelize'
-import { sequelize } from '../db/database.js';
-import { User } from './auth.js';
+import MongoDb from 'mongodb'
+import { getTweets } from '../db/database.js';
+import * as UserRepository from './auth.js'  // 사용자 정보 가져옴
 
-const DataTypes = SQ.DataTypes; // 데이터 형식을 지정해줄 수 있음
+const ObjectId = MongoDb.ObjectId;
 
-const INCLUDE_USER = {
-    // select 뒤에 보고싶은 필드만 적듯이 attributes에 보고싶은 애들만 적어줌
-    attributes: [
-        'id',
-        'text',
-        'createdAt',
-        'userId',
-        // users 테이블에 있는 요소들 -> 한단계 안에 있는 요소들을 한단계 밖으로 꺼냄
-        [Sequelize.col('user.name'), 'name'],   // name으로 지정
-        [Sequelize.col('user.username'), 'username'],  // username으로 지정
-        [Sequelize.col('user.url'),'url']     // url으로 지정
-    ],
-    include : {
-        model: User,
-        attributes: [],    // 위에서 작성한 attributes를 포함하여 보낸다
-    }
+/*
+MongoDb : NoSQL(스키마 없음, 중복된데이터가 들어갈 수있음, 하지만 조회나 출력에 있어서 속도가 굉장히 빠름) -> 스키마를 만들수 있는 라이브러리를 사용하면 Relational하게 사용할 수 있음
+하지만 굳이 NoSQl의 특징을 죽여가면서 사용할 이유가 없음!
+*/
+
+//tweet이 있으면 tweet객체를 복사한 새로운 객체로 만들고 _id 필드(ObjectId)를 str로 변환 후 추가하여 반환
+function mapOptionalTweet(tweet) {
+    return tweet ? { ...tweet, id: tweet._id.toString() } : tweet;
 }
 
-
-const ORDER_DESC = {
-    order: [['createdAt', 'DESC']]
+//여러개의 tweets를 배열로 map해서 보여주는 함수
+function mapTweets(tweets){
+    return tweets.map(mapOptionalTweet)
 }
-
-export const Tweet = sequelize.define(
-    'tweet',
-    {
-        id: {
-            type: DataTypes.INTEGER,
-            autoIncrement:true,
-            allowNull:false,
-            primaryKey: true
-        },
-        text: {
-            type: DataTypes.TEXT,
-            allowNull: false
-        } 
-    }
-    // { timestamps: false }   false로 하면 createdAt, updatedAt이 안생김
-)
-// User 테이블과 join
-Tweet.belongsTo(User)
 
 // 전체 데이터 반환
-export async function getAll(){
-    // ...INCLUDE_USER 계속 사용할 객체 -> 복사해서 넣음
-    return Tweet.findAll({...INCLUDE_USER, ...ORDER_DESC})
+export async function getAll() {
+    return getTweets().find()
+        .sort({ createdAt: -1 })    // -1은 내림차순, 1은 오름차순
+        .toArray()
+        .then(mapTweets)
 }
 
 // username(회원의 아이디)으로 데이터 반환
-export async function getAllByUsername(username){
-    return Tweet.findAll({
-        ...INCLUDE_USER, 
-        ...ORDER_DESC,
-        include: {
-            ...INCLUDE_USER.include,
-                where: {username}   // username:username인 것을 확인해서 조회
-        }})
+export async function getAllByUsername(username) {
+    return getTweets().find({username})
+    .sort({createdAt:-1})
+    .toArray()
+    .then(mapTweets)
 }
 
-
 // id(트윗의 번호)로 데이터 반환
-//find(): 배열에서 원하는 값을 찾는 데 사용
-export async function getById(id){
-    return Tweet.findOne({
-        where:{id},   // where절이 무조건 먼저 나와야함, 조인했을때 어떤 테이블에서 찾는지는 다음에 작성)
-        ...INCLUDE_USER 
-    })
+export async function getById(id) {
+    return getTweets().find({_id: new ObjectId(id)})   // 전달받은 id를 ObjectId처럼 만들기 위해 Object화
+    .next()
+    .then(mapOptionalTweet)
 }
 
 // Post 
 // tweets에 새로운 객체로 생성
-export async function create(text, userId){
-    return Tweet.create({text, userId}).then((data) => {
-        console.log(data)
-        return data
-    })
+export async function create(text, userId) {
+    // UserRepository에서 userId로 찾은 user객체반환
+    return UserRepository.findById(userId)
+        .then((user) => getTweets().insertOne({
+            text,
+            createdAt: new Date(),
+            userId,
+            name: user.name,    // user객체에서 필요한 정보만 뽑아서 같이 출력할 수 있음
+            username: user.username,
+            url: user.url
+        }))
+        .then((result) => console.log(result))
+        .then(mapOptionalTweet)
 }
 
 
 // put (tweet의 내용 수정)
 // id와 text를 보냄
-export async function update(id, text){
-    return Tweet.findByPk(id, INCLUDE_USER).then((tweet) => {
-        tweet.text = text;
-        return tweet.save()  // 새로운  tweet 객체를 저장함
-    })
+export async function update(id, text) {
+    return getTweets().findOneAndUpdate(
+        {_id: new ObjectId(id)},
+        { $set: {text}},
+        {returnOriginal: false}
+    )
+    .then((result) => result.value)
+    .then(mapOptionalTweet)
 }
 
 //delete
 //id로 지우고싶은 tweet 지움
-export async function remove(id){
-    return Tweet.findByPk(id).then((tweet) => {
-        tweet.destroy()   // 아이디로 찾은 해당 tweet을 삭제함
-    })
+export async function remove(id) {
+    getTweets().deleteOne({_id: new ObjectId(id)})
 }   
