@@ -92,3 +92,11 @@ MongoDB
 
 몽고디비 설명서
 https://www.mongodb.com/docs/atlas/app-services/
+
+
+5/16
+
+Mongoose
+- https://mongoosejs.com/docs/guide.html
+- Node.js 기반의 MongoDB를 더 쉽게 사용할 수 있도록 도와주는 ODM(Object Data Modeling) 라이브러리
+- ODM은 데이터베이스와 애플리케이션의 객체 모델 간의 매핑을 제공하여 데이터베이스 작업을 보다 쉽게 처리

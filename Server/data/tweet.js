@@ -1,47 +1,37 @@
 // 데이터와 데이터를 처리하는 로직
 // 트윗된 데이터를 가져옴
-import MongoDb from 'mongodb'
-import { getTweets } from '../db/database.js';
+import Mongoose from 'mongoose';
+import { userVirtualId } from '../db/database.js';
 import * as UserRepository from './auth.js'  // 사용자 정보 가져옴
 
-const ObjectId = MongoDb.ObjectId;
+const tweetSchema = new Mongoose.Schema({
+    text: {type: String, required: true},    //required: 해당 필드의 값이 필수인지 여부
+    userId: {type: String, required: true},
+    name: {type: String, required: true},
+    username: {type: String, required: true},
+    url: String,   // 자바스크립트는 마지막요소에 컴마(,)있어도 관계없음
+},
+{ timestamp: true}   // createdAt, updatedAt 생김
+)
 
-/*
-MongoDb : NoSQL(스키마 없음, 중복된데이터가 들어갈 수있음, 하지만 조회나 출력에 있어서 속도가 굉장히 빠름) -> 스키마를 만들수 있는 라이브러리를 사용하면 Relational하게 사용할 수 있음
-하지만 굳이 NoSQl의 특징을 죽여가면서 사용할 이유가 없음!
-*/
 
-//tweet이 있으면 tweet객체를 복사한 새로운 객체로 만들고 _id 필드(ObjectId)를 str로 변환 후 추가하여 반환
-function mapOptionalTweet(tweet) {
-    return tweet ? { ...tweet, id: tweet._id.toString() } : tweet;
-}
+userVirtualId(tweetSchema)
+const Tweet = Mongoose.model('Tweet', tweetSchema)  // Tweets로 만들어짐
 
-//여러개의 tweets를 배열로 map해서 보여주는 함수
-function mapTweets(tweets){
-    return tweets.map(mapOptionalTweet)
-}
 
 // 전체 데이터 반환
 export async function getAll() {
-    return getTweets().find()
-        .sort({ createdAt: -1 })    // -1은 내림차순, 1은 오름차순
-        .toArray()
-        .then(mapTweets)
+    return Tweet.find().sort({ createdAt: -1 })   // -1: 내림차순
 }
 
 // username(회원의 아이디)으로 데이터 반환
 export async function getAllByUsername(username) {
-    return getTweets().find({username})
-    .sort({createdAt:-1})
-    .toArray()
-    .then(mapTweets)
+    return Tweet.find({ username }).sort({ createdAt: -1 })
 }
 
 // id(트윗의 번호)로 데이터 반환
 export async function getById(id) {
-    return getTweets().find({_id: new ObjectId(id)})   // 전달받은 id를 ObjectId처럼 만들기 위해 Object화
-    .next()
-    .then(mapOptionalTweet)
+    return Tweet.findById(id)  // id는 1개만 데이터가 나오기때문에 정렬할 필요x
 }
 
 // Post 
@@ -49,33 +39,24 @@ export async function getById(id) {
 export async function create(text, userId) {
     // UserRepository에서 userId로 찾은 user객체반환
     return UserRepository.findById(userId)
-        .then((user) => getTweets().insertOne({
+        .then((user) => new Tweet({
             text,
-            createdAt: new Date(),
             userId,
-            name: user.name,    // user객체에서 필요한 정보만 뽑아서 같이 출력할 수 있음
-            username: user.username,
-            url: user.url
-        }))
-        .then((result) => console.log(result))
-        .then(mapOptionalTweet)
+            name: user.name,
+            username: user.username
+        }).save()
+        )
 }
 
 
 // put (tweet의 내용 수정)
 // id와 text를 보냄
 export async function update(id, text) {
-    return getTweets().findOneAndUpdate(
-        {_id: new ObjectId(id)},
-        { $set: {text}},
-        {returnOriginal: false}
-    )
-    .then((result) => result.value)
-    .then(mapOptionalTweet)
+    return Tweet.findByIdAndUpdate(id, { text }, { returnOriginal:false })  //returnOriginal:false -> 업데이트 이전의 원본 문서를 반환하지 않도록 설정
 }
 
 //delete
 //id로 지우고싶은 tweet 지움
 export async function remove(id) {
-    getTweets().deleteOne({_id: new ObjectId(id)})
+    return Tweet.findByIdAndDelete(id)
 }   
